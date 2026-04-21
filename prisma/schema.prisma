@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum StockStatus {
+  AVAILABLE
+  LOCKED
+  SOLD
+  INVALID
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAYMENT_PROCESSING
+  PAID_PENDING_DELIVERY
+  COMPLETED
+  CANCELLED
+  EXCEPTION
+}
+
+enum PaymentStatus {
+  CREATED
+  WAITING
+  PAID
+  FAILED
+  EXPIRED
+}
+
+enum PaymentProvider {
+  MOCKPAY
+  EASYPAY_COMPAT
+}
+
+enum DeliveryStatus {
+  READY
+  DELIVERED
+  FAILED
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model Product {
+  id                    String        @id @default(cuid())
+  categoryId            String
+  name                  String
+  slug                  String        @unique
+  summary               String
+  description           String
+  coverImage            String?
+  price                 Int
+  status                ProductStatus @default(DRAFT)
+  stockWarningThreshold Int           @default(5)
+  purchaseLimitMin      Int           @default(1)
+  purchaseLimitMax      Int           @default(5)
+  isFeatured            Boolean       @default(false)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  category              Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  stockItems            StockItem[]
+  orders                Order[]
+}
+
+model StockItem {
+  id         String      @id @default(cuid())
+  productId  String
+  serialCode String
+  secretCode String
+  status     StockStatus @default(AVAILABLE)
+  batchLabel String?
+  soldAt     DateTime?
+  orderId    String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order      Order?      @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([productId, status])
+}
+
+model Order {
+  id            String         @id @default(cuid())
+  orderNo       String         @unique
+  accessKey     String         @unique @default(cuid())
+  productId     String
+  quantity      Int
+  amount        Int
+  currency      String         @default("CNY")
+  customerEmail String?
+  customerPhone String?
+  lookupKey     String
+  status        OrderStatus    @default(PENDING_PAYMENT)
+  expiresAt     DateTime
+  paidAt        DateTime?
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+  failureReason String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
+  stockItems    StockItem[]
+  paymentOrders PaymentOrder[]
+  deliveries    Delivery[]
+
+  @@index([lookupKey])
+  @@index([status])
+}
+
+model PaymentOrder {
+  id                 String          @id @default(cuid())
+  orderId            String
+  paymentNo          String          @unique
+  provider           PaymentProvider @default(MOCKPAY)
+  providerTradeNo    String?
+  providerMerchantId String?
+  paymentUrl         String
+  amount             Int
+  status             PaymentStatus   @default(CREATED)
+  rawCreateResponse  String?
+  rawCallbackPayload String?
+  callbackVerified   Boolean         @default(false)
+  paidAt             DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  order              Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  callbackLogs       CallbackLog[]
+
+  @@index([orderId, status])
+}
+
+model Delivery {
+  id              String         @id @default(cuid())
+  orderId         String
+  deliveryCode    String         @unique
+  status          DeliveryStatus @default(READY)
+  deliveredAt     DateTime?
+  payloadSnapshot String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model CallbackLog {
+  id             String       @id @default(cuid())
+  paymentOrderId String
+  provider       String
+  payload        String
+  verified       Boolean      @default(false)
+  processed      Boolean      @default(false)
+  result         String
+  createdAt      DateTime     @default(now())
+  paymentOrder   PaymentOrder @relation(fields: [paymentOrderId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  targetType String
+  targetId   String
+  detail     String
+  createdAt  DateTime @default(now())
+}

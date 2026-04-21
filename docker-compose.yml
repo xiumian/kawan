@@ -1,0 +1,32 @@
+services:
+  chenfenpro:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      DATABASE_URL: file:/app/data/dev.db
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: chenfenpro123
+      ADMIN_SESSION_SECRET: change-this-before-production
+      OPS_CRON_TOKEN: change-this-too
+      PAYMENT_PROVIDER: mockpay
+      PAYMENT_NOTIFY_PATH: /api/payments/callback
+      EASYPAY_SUBMIT_URL: ""
+      EASYPAY_PID: ""
+      EASYPAY_KEY: ""
+      EASYPAY_SIGN_TYPE: MD5
+      EASYPAY_RETURN_URL: ""
+      EASYPAY_NOTIFY_URL: ""
+      EASYPAY_PAYMENT_TYPE: alipay
+    volumes:
+      - chenfenpro-sqlite:/app/data
+
+volumes:
+  chenfenpro-sqlite:

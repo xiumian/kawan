@@ -1,0 +1,15 @@
+.git
+.next
+node_modules
+coverage
+docs
+tests
+.vercel
+.env
+.env.*
+*.log
+*.tsbuildinfo
+tmp-*.log
+**/*.db-journal
+**/*.db-wal
+**/*.db-shm
